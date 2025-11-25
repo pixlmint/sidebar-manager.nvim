@@ -1,6 +1,8 @@
 # vim-sidebar-manager
 
-A sidebar manger for Vim/Neovim to mimic an IDE-like UI layout.
+A sidebar manager for Neovim to mimic an IDE-like UI layout.
+
+**Note:** This plugin requires Neovim 0.11+ and is written in Lua using modern Neovim APIs.
 
 ## TL;DR
 
@@ -27,60 +29,101 @@ this plugin.
 Here's an example of configuration for NERDTree, Tagbar and Undotree at the
 left side.
 
-```vim
-let g:sidebars = {}
+```lua
+-- Configure the underlying plugins
+vim.g.NERDTreeWinPos = 'left'
+vim.g.NERDTreeWinSize = 40
+vim.g.NERDTreeQuitOnOpen = 0
 
-let g:NERDTreeWinPos = 'left'
-let g:NERDTreeWinSize = 40
-let g:NERDTreeQuitOnOpen = 0
+vim.g.tagbar_left = 1
+vim.g.tagbar_width = 40
+vim.g.tagbar_autoclose = 0
+vim.g.tagbar_autofocus = 1
 
-let g:sidebars.nerdtree = {
-\   'position': 'left',
-\   'filter': {nr -> getwinvar(nr, '&filetype') ==# 'nerdtree'},
-\   'open': 'NERDTree',
-\   'close': 'NERDTreeClose',
-\   'width': 40
-\ }
+vim.g.undotree_SetFocusWhenToggle = 1
+vim.g.undotree_SplitWidth = 40
 
-let g:tagbar_left = 1
-let g:tagbar_width = 40
-let g:tagbar_autoclose = 0
-let g:tagbar_autofocus = 1
+-- Setup vim-sidebar-manager
+require('sidebar').setup({
+  sidebars = {
+    nerdtree = {
+      position = 'left',
+      filter = function(winid)
+        return vim.api.nvim_get_option_value('filetype', { win = winid }) == 'nerdtree'
+      end,
+      open = 'NERDTree',
+      close = 'NERDTreeClose',
+      width = 40,
+    },
+    tagbar = {
+      position = 'left',
+      filter = function(winid)
+        local bufnr = vim.api.nvim_win_get_buf(winid)
+        local bufname = vim.api.nvim_buf_get_name(bufnr)
+        return bufname:match('__Tagbar__') ~= nil
+      end,
+      open = 'TagbarOpen',
+      close = 'TagbarClose',
+    },
+    undotree = {
+      position = 'left',
+      filter = function(winid)
+        return vim.api.nvim_get_option_value('filetype', { win = winid }) == 'undotree'
+      end,
+      open = 'UndotreeShow',
+      close = 'UndotreeHide',
+    },
+  },
+})
 
-let g:sidebars.tagbar = {
-\   'position': 'left',
-\   'filter': {nr -> bufname(winbufnr(nr)) =~ '__Tagbar__'},
-\   'open': 'TagbarOpen',
-\   'close': 'TagbarClose'
-\ }
-
-let g:undotree_SetFocusWhenToggle = 1
-let g:undotree_SplitWidth = 40
-
-let g:sidebars.undotree = {
-\   'position': 'left',
-\   'filter': {nr -> getwinvar(nr, '&filetype') ==# 'undotree'},
-\   'open': 'UndotreeShow',
-\   'close': 'UndotreeHide'
-\ }
-
-noremap <silent> <M-1> :call sidebar#toggle('nerdtree')<CR>
-noremap <silent> <M-2> :call sidebar#toggle('tagbar')<CR>
-noremap <silent> <M-3> :call sidebar#toggle('undotree')<CR>
+-- Key mappings
+vim.keymap.set('n', '<M-1>', function()
+  require('sidebar').toggle('nerdtree')
+end, { silent = true })
+vim.keymap.set('n', '<M-2>', function()
+  require('sidebar').toggle('tagbar')
+end, { silent = true })
+vim.keymap.set('n', '<M-3>', function()
+  require('sidebar').toggle('undotree')
+end, { silent = true })
 ```
 
-Notes:
+### Configuration Options
 
-- `vim-sidebar-manager` moves the configured windows to the specified side,
+The `setup()` function accepts the following options:
+
+- `sidebars`: Dictionary of sidebar configurations (key = sidebar name, value = config table)
+  - Alternatively, can be an array where each item has a `name` field
+- `left_width`: Default width for left sidebars (default: 40)
+- `right_width`: Default width for right sidebars (default: 40)
+- `top_height`: Default height for top sidebars (default: 0.4)
+- `bottom_height`: Default height for bottom sidebars (default: 0.4)
+- `move`: Whether to move sidebars to their position (default: true)
+- `opts`: Default window options for all sidebars
+- `close_tab_on_closing_last_buffer`: Auto-close tab when only sidebars remain (default: false)
+
+### Sidebar Configuration
+
+Each sidebar configuration requires:
+
+- `position`: 'left', 'right', 'top', or 'bottom'
+- `filter`: Lua function taking window ID, returns boolean
+- `open`: Command string or Lua function to open the sidebar
+
+Optional fields:
+
+- `close`: Command string or Lua function (default: `nvim_win_close`)
+- `width`/`height`: Override default dimensions (number or float <1 for percentage)
+- `move`: Override global `move` setting
+- `opts`: Window-local options (extends global `opts`)
+- `dont_close`: String pattern or list of patterns - don't close matching sidebars when opening this one
+- `get_win`: Custom function to find window ID (alternative to `filter`)
+
+### Notes
+
+- `vim-sidebar-manager` moves the configured windows to the specified side
   and adjusts their sizes correspondingly. However sometimes it may not work
-  propoerly. In that case, you may need to adjust the settings of the plugins.
-
-- The `filter` field must be a Funcref who takes the `winnr` as an argument
-  and returns a boolean (number) to indicate whether or not the window
-  corresponding to this `nr` is the specific kind of sidebar window .
-
-- The `open` and `close` fields can be either a string of command or a
-  Funcref. If `close` is ommited, `wincmd q` is used as the default.
+  properly. In that case, you may need to adjust the settings of the underlying plugins.
 
 For more examples, please refer to the [Wiki page](https://github.com/brglng/vim-sidebar-manager/wiki/Examples)
 
