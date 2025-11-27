@@ -76,7 +76,7 @@ require('sidebar').setup({
   },
 })
 
--- Key mappings
+-- Key mappings (using Lua API)
 vim.keymap.set('n', '<M-1>', function()
   require('sidebar').toggle('nerdtree')
 end, { silent = true })
@@ -86,6 +86,11 @@ end, { silent = true })
 vim.keymap.set('n', '<M-3>', function()
   require('sidebar').toggle('undotree')
 end, { silent = true })
+
+-- Alternative: using commands
+vim.keymap.set('n', '<M-1>', '<cmd>SidebarToggle nerdtree<CR>', { silent = true })
+vim.keymap.set('n', '<M-2>', '<cmd>SidebarToggle tagbar<CR>', { silent = true })
+vim.keymap.set('n', '<M-3>', '<cmd>SidebarToggle undotree<CR>', { silent = true })
 ```
 
 ### Configuration Options
@@ -118,6 +123,25 @@ Optional fields:
 - `opts`: Window-local options (extends global `opts`)
 - `dont_close`: String pattern or list of patterns - don't close matching sidebars when opening this one
 - `get_win`: Custom function to find window ID (alternative to `filter`)
+
+### Available Commands
+
+The plugin provides the following commands:
+
+- `:Sidebar <name>` - Open/switch to a sidebar (with autocomplete)
+- `:SidebarOpen <name>` - Open/switch to a sidebar
+- `:SidebarSwitch <name>` - Switch to a sidebar (alias for Open)
+- `:SidebarToggle <name>` - Toggle a sidebar (close if open, open if closed)
+- `:SidebarClose <name>` - Close a specific sidebar
+- `:SidebarCloseSide <position>` - Close all sidebars at a position (left/right/top/bottom)
+- `:SidebarCloseAll` - Close all sidebars
+
+All commands that take a sidebar name include autocomplete support. For example:
+
+```vim
+:Sidebar nerd<TAB>    " Autocompletes to :Sidebar nerdtree
+:SidebarToggle tag<TAB>    " Autocompletes to :SidebarToggle tagbar
+```
 
 ### Notes
 

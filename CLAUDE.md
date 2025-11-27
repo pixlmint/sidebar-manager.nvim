@@ -77,6 +77,16 @@ The plugin leverages Neovim 0.11+ APIs instead of legacy `vim.fn.*` functions:
 - On Neovim with `splitkeep` option: No-op (Neovim handles it automatically)
 - On older Neovim: Uses `vim.fn.winsaveview()`/`vim.fn.winrestview()` across all windows
 
+**User Commands** (created in `M.setup()`):
+- `:Sidebar <name>`: Primary command to open/switch to a sidebar with autocomplete
+- `:SidebarOpen <name>`: Open/switch to a sidebar (alias for `:Sidebar`)
+- `:SidebarSwitch <name>`: Switch to a sidebar
+- `:SidebarToggle <name>`: Toggle a sidebar
+- `:SidebarClose <name>`: Close a specific sidebar
+- `:SidebarCloseSide <position>`: Close all sidebars at a position
+- `:SidebarCloseAll`: Close all sidebars
+- All commands that take a name/position include autocomplete via completion functions
+
 ### Setup Function
 
 The `M.setup(opts)` function initializes the plugin and accepts:

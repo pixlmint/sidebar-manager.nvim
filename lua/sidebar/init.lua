@@ -16,6 +16,7 @@ M.config = {
   top_height = 0.4,
   bottom_height = 0.4,
   move = true,
+  lualine = false,
   opts = {
     winfixwidth = false,
     winfixheight = false,
@@ -213,7 +214,6 @@ local function setup_win(name, winid)
 
   if not has_q then
     vim.api.nvim_buf_set_keymap(bufnr, 'n', 'q', '<C-w>q', {
-      buffer = bufnr,
       silent = true,
       noremap = true,
     })
@@ -262,6 +262,11 @@ end
 ---@param name string
 local function close(name)
   local sidebar = sidebars[name]
+
+  if M.config.lualine ~= nil and M.config.lualine ~= false then
+    require("lualine.components.sidebar").set_current({})
+  end
+
   if sidebar.close then
     call_or_exec(sidebar.close)
   else
@@ -395,6 +400,9 @@ function M.setup_current_sidebar_window()
 
   local winid, sidebar = M.get_current_sidebar()
   if winid and sidebar then
+    if M.config.lualine ~= nil and M.config.lualine ~= false then
+      require("lualine.components.sidebar").set_current(sidebar)
+    end
     setup_win(sidebar.name, winid)
   end
 
@@ -447,6 +455,10 @@ function M.switch(name)
 
   if position == 'top' or position == 'bottom' then
     restore_view()
+  end
+
+  if M.config.lualine ~= nil and M.config.lualine ~= false then
+    require("lualine.components.sidebar").set_current(sidebar)
   end
 end
 
@@ -629,6 +641,14 @@ function M.open_last_help(cmd)
   end
 end
 
+---Get lualine component for sidebars
+---@param opts? table Options for the lualine component
+function M.lualine_component(opts)
+  opts = opts or {}
+
+  require("lualine.components.sidebar").setup(opts)
+end
+
 ---Setup plugin
 ---@param opts table|nil Configuration options
 ---  - sidebars: table Dictionary of sidebar configurations (key = name, value = config)
@@ -671,6 +691,17 @@ function M.setup(opts)
     end
   end
 
+  if M.config.lualine ~= nil then
+    if type(M.config.lualine) == "table" then
+      require("lualine.components.sidebar").setup({
+        sidebars = sidebars_config,
+        config = M.config.lualine,
+      })
+    elseif M.config.lualine then
+      require("lualine.components.sidebar").setup({ sidebars = sidebars_config })
+    end
+  end
+
   -- Create autocommands
   local group = vim.api.nvim_create_augroup('Sidebar', { clear = true })
 
@@ -693,7 +724,34 @@ function M.setup(opts)
     end,
   })
 
+  vim.api.nvim_create_autocmd({ 'BufWinLeave' }, {
+    group = group,
+    callback = function()
+      -- Schedule to avoid issues with window setup during events
+      vim.schedule(function()
+        if M.is_sidebar() then
+          M.setup_current_sidebar_window()
+        end
+      end)
+    end,
+  })
+
   -- Create user commands
+  vim.api.nvim_create_user_command('Sidebar', function(args)
+    M.open(args.args)
+  end, {
+    nargs = 1,
+    complete = function(arg_lead)
+      local names = {}
+      for name, _ in pairs(sidebars) do
+        if vim.startswith(name, arg_lead) then
+          table.insert(names, name)
+        end
+      end
+      return names
+    end,
+  })
+
   vim.api.nvim_create_user_command('SidebarOpen', function(args)
     M.open(args.args)
   end, {
